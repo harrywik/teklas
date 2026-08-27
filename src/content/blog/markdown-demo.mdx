@@ -1,0 +1,231 @@
+---
+title: 'Markdown-demonstration'
+description: 'En komplett guide till alla Markdown-funktioner som stöds på Teklas.'
+pubDate: 'Aug 20 2026'
+category: 'opinion-piece'
+heroImage: '../../assets/images/md.png'
+---
+
+# Markdown-demonstration
+
+Detta inlägg visar alla Markdown-funktioner som stöds på Teklas. Använd detta som referens när du skriver nya inlägg.
+
+## Textformatering
+
+Du kan skriva text på flera olika sätt:
+
+- **Fet text** för att betona viktiga punkter
+- *Kursiv text* för subtila betoningar
+- ***Fet och kursiv text*** för maximal effekt
+- ~~Genomstruken text~~ för att visa ändringar
+- `Inline-kod` för kodreferenser i texten
+
+## Länkar
+
+[Här är en länk till exempel.se](https://exempel.se) som visar hur länkar fungerar. Du kan också länka till [andra inlägg](/blog/lundagard-strip/) på sajten.
+
+## Listor
+
+### Oordnad lista
+
+- Första punkten
+- Andra punkten
+  - Underpunkt A
+  - Underpunkt B
+- Tredje punkten
+
+### Ordnad lista
+
+1. Steg ett
+2. Steg två
+3. Steg tre
+   1. Understeg 3.1
+   2. Understeg 3.2
+
+### Att-göra-lista
+
+- [x] Slutförd uppgift
+- [ ] Pågående uppgift
+- [ ] Framtida uppgift
+
+## Citat
+
+> Detta är ett blockcitat. Det används för att citera text från andra källor eller för att lyfta fram viktiga uttalanden.
+>
+> Citat kan ha flera stycken och formateras med en accentfärgad kant till vänster.
+
+## Kodblock
+
+### Inline-kod
+
+Använd `console.log()` för att skriva till konsolen.
+
+### Fenced kodblock
+
+```javascript
+function hälsa(namn) {
+  return `Hej ${namn}! Välkommen till Teklas.`;
+}
+
+console.log(hälsa('Anna'));
+```
+
+```python
+class BlogPost:
+    def __init__(self, titel, kategori):
+        self.titel = titel
+        self.kategori = kategori
+    
+    def visa(self):
+        print(f"{self.titel} [{self.kategori}]")
+
+post = BlogPost("Min första post", "serier")
+post.visa()
+```
+
+```css
+.card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+}
+```
+
+## Tabeller
+
+| Funktion | Syntax | Exempel |
+|----------|--------|---------|
+| Fet text | `**text**` | **fet** |
+| Kursiv | `*text*` | *kursiv* |
+| Länk | `[text](url)` | [länk](https://exempel.se) |
+| Bild | `![alt](url)` | ![bild](/favicon.svg) |
+| Kod | ``kod`` | `kod` |
+
+## Horisontell linje
+
+Ovanför denna rad finns text, och nedanför kommer en horisontell linje som separerar innehåll:
+
+---
+
+## Bilder
+
+### Standardbild (Markdown-syntax)
+
+![Exempelbild](/favicon.svg)
+
+*Bilder visas med rundade hörn och skugga för bättre visuell effekt.*
+
+### Kontrollera bildstorlek med HTML
+
+Du kan använda HTML `<img>`-taggar för att kontrollera storlek:
+
+**Liten bild (200px):**
+
+<img src="/favicon.svg" alt="Liten bild" width="200" />
+
+**Medelstor bild (400px):**
+
+<img src="/favicon.svg" alt="Medelstor bild" width="400" />
+
+**Stor bild (600px):**
+
+<img src="/favicon.svg" alt="Stor bild" width="600" />
+
+### Använda Astro Image-komponenten (i MDX)
+
+I MDX-filer kan du importera och använda Astro's `<Image>`-komponent för mer kontroll:
+
+```mdx
+import { Image } from 'astro:assets';
+import MinBild from '../assets/min-bild.png';
+
+<Image src={MinBild} width={800} alt="Beskrivning" />
+```
+
+## Bildkarusell
+
+För att visa flera bilder på ett interaktivt sätt kan du använda `Carousel`-komponenten. Den har en suddig bakgrundseffekt, navigeringsknappar och ett helskärmsläge.
+
+import Carousel from '../../components/Carousel.tsx';
+import LundagardStrip from '../../assets/images/lundagard-strip.png';
+import NeaYlva from '../../assets/images/nea-ylva.png';
+
+<Carousel
+  client:load
+  images={[
+    { src: LundagardStrip.src, alt: 'Lundagård-serien' },
+    { src: NeaYlva.src, alt: 'Nea och Ylva porträtt' },
+    { src: LundagardStrip.src, alt: 'Lundagård-serien igen' }
+  ]}
+/>
+
+### Hur man använder karusellen
+
+1. Importera komponenten och bilder i början av ditt MDX-inlägg:
+   ```mdx
+   import Carousel from '../../components/Carousel.tsx';
+   import Bild1 from '../../assets/bild1.png';
+   import Bild2 from '../../assets/bild2.png';
+   ```
+
+2. Använd komponenten med en images-prop:
+   ```mdx
+   <Carousel
+     client:load
+     images={[
+       { src: Bild1.src, alt: 'Beskrivning av bild 1' },
+       { src: Bild2.src, alt: 'Beskrivning av bild 2' }
+     ]}
+   />
+   ```
+
+3. Bilder navigeras med pilknapparna eller punkterna längst ner.
+
+4. Klicka på förstoringsikonen i övre högra hörnet för att visa i helskärm.
+
+## Rubriker
+
+### H3-rubrik
+
+Detta är en underrubrik på nivå 3.
+
+#### H4-rubrik
+
+Detta är en underrubrik på nivå 4.
+
+##### H5-rubrik
+
+Detta är en underrubrik på nivå 5.
+
+###### H6-rubrik
+
+Detta är den minsta rubriknivån.
+
+## Fotnoter
+
+Detta är en mening med en fotnot[^1]. Här är en annan mening med en annan fotnot[^2].
+
+[^1]: Detta är den första fotnoten. Den ger ytterligare information utan att avbryta huvudtexten.
+
+[^2]: Detta är den andra fotnoten. Fotnoter är bra för referenser och förklaringar.
+
+## Sammanfattning
+
+Detta inlägg har demonstrerat:
+
+- **Textformatering**: fet, kursiv, genomstruken, inline-kod
+- **Länkar**: externa och interna länkar
+- **Listor**: oordnade, ordnade och att-göra-listor
+- **Citat**: blockcitat med styling
+- **Kod**: inline och fenced kodblock med syntaxfärgning
+- **Tabeller**: strukturerad data i tabellformat
+- **Horisontella linjer**: visuell separation
+- **Bilder**: standard Markdown, HTML img-taggar, Astro Image-komponenten
+- **Bildkarusell**: interaktiv komponent med helskärmsläge
+- **Rubriker**: alla nivåer från H1 till H6
+- **Fotnoter**: för referenser och förklaringar

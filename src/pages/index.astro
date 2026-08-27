@@ -1,49 +1,122 @@
 ---
+import { Image } from 'astro:assets';
+import { getCollection } from 'astro:content';
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
+import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { CATEGORIES, SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+
+const allPosts = (await getCollection('blog')).sort(
+	(a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+);
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="sv">
 	<head>
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
 	</head>
 	<body>
 		<Header />
-		<main>
-			<h1>🧑‍🚀 Hello, Astronaut!</h1>
-			<p>
-				Welcome to the official <a href="https://astro.build/">Astro</a> blog starter template. This template
-				serves as a lightweight, minimally-styled starting point for anyone looking to build a personal
-				website, blog, or portfolio with Astro.
-			</p>
-			<p>
-				This template comes with a few integrations already configured in your
-				<code>astro.config.mjs</code> file. You can customize your setup with
-				<a href="https://astro.build/integrations">Astro Integrations</a> to add tools like Tailwind,
-				React, or Vue to your project.
-			</p>
-			<p>Here are a few ideas on how to get started with the template:</p>
-			<ul>
-				<li>Edit this page in <code>src/pages/index.astro</code></li>
-				<li>Edit the site header items in <code>src/components/Header.astro</code></li>
-				<li>Add your name to the footer in <code>src/components/Footer.astro</code></li>
-				<li>Check out the included blog posts in <code>src/content/blog/</code></li>
-				<li>Customize the blog post page layout in <code>src/layouts/BlogPost.astro</code></li>
-			</ul>
-			<p>
-				Have fun! If you get stuck, remember to
-				<a href="https://docs.astro.build/">read the docs</a>
-				or <a href="https://astro.build/chat">join us on Discord</a> to ask questions.
-			</p>
-			<p>
-				Looking for a blog template with a bit more personality? Check out
-				<a href="https://github.com/Charca/astro-blog-template">astro-blog-template</a>
-				by <a href="https://twitter.com/Charca">Maxi Ferreira</a>.
+		<main class="max-w-6xl mx-auto px-6 py-12">
+			<section class="text-center mb-12">
+				<h1 class="text-6xl font-bold text-dark mb-3 tracking-tight">{SITE_TITLE}</h1>
+				<p class="text-xl text-gray-600">{SITE_DESCRIPTION}</p>
+			</section>
+
+			<div class="flex flex-wrap gap-3 justify-center mb-12" id="filters">
+				<button
+					data-category="all"
+					class="filter-btn px-6 py-2 rounded-full font-semibold text-sm transition-all shadow-sm bg-dark text-cream shadow-md"
+				>
+					Alla
+				</button>
+				{
+					Object.entries(CATEGORIES).map(([key, cat]) => (
+						<button
+							data-category={key}
+							class="filter-btn px-6 py-2 rounded-full font-semibold text-sm transition-all shadow-sm bg-white text-gray-700 hover:shadow-md"
+						>
+							{cat.label}
+						</button>
+					))
+				}
+			</div>
+
+			<div class="grid md:grid-cols-2 gap-8" id="post-grid">
+				{
+					allPosts.map((post) => (
+						<a
+							href={`/blog/${post.id}/`}
+							class="post-card group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 block"
+							data-category={post.data.category}
+						>
+							{post.data.heroImage && (
+								<div class="aspect-[2/1] overflow-hidden">
+									<Image
+										width={720}
+										height={360}
+										src={post.data.heroImage}
+										alt=""
+										class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+									/>
+								</div>
+							)}
+							<div class="p-6">
+								<div class="flex items-center gap-3 mb-3">
+									<span
+										class="px-3 py-1 rounded-full text-xs font-bold text-cream"
+										style={`background-color: ${CATEGORIES[post.data.category].color}`}
+									>
+										{CATEGORIES[post.data.category].label}
+									</span>
+									<FormattedDate date={post.data.pubDate} />
+								</div>
+								<h3 class="text-xl font-bold text-dark group-hover:text-accent transition-colors">
+									{post.data.title}
+								</h3>
+							</div>
+						</a>
+					))
+				}
+			</div>
+
+			<p id="empty-state" class="text-center py-16 text-gray-500 text-lg hidden">
+				Inga inlägg i denna kategori ännu.
 			</p>
 		</main>
 		<Footer />
+
+		<script>
+			const buttons = document.querySelectorAll('.filter-btn');
+			const cards = document.querySelectorAll('.post-card');
+			const emptyState = document.getElementById('empty-state');
+
+			buttons.forEach((btn) => {
+				btn.addEventListener('click', () => {
+					const cat = btn.dataset.category;
+
+					buttons.forEach((b) => {
+						b.className =
+							'filter-btn px-6 py-2 rounded-full font-semibold text-sm transition-all shadow-sm bg-white text-gray-700 hover:shadow-md';
+					});
+					btn.className =
+						'filter-btn px-6 py-2 rounded-full font-semibold text-sm transition-all shadow-sm bg-dark text-cream shadow-md';
+
+					let visible = 0;
+					cards.forEach((card) => {
+						if (cat === 'all' || card.dataset.category === cat) {
+							card.style.display = '';
+							visible++;
+						} else {
+							card.style.display = 'none';
+						}
+					});
+
+					emptyState.classList.toggle('hidden', visible > 0);
+				});
+			});
+		</script>
 	</body>
 </html>

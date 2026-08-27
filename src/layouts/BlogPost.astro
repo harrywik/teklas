@@ -5,81 +5,83 @@ import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
 import Header from '../components/Header.astro';
+import { CATEGORIES } from '../consts';
 
-type Props = CollectionEntry<'blog'>['data'];
+type Props = CollectionEntry<'blog'>['data'] & {
+	category: string;
+	prevPost: CollectionEntry<'blog'> | null;
+	nextPost: CollectionEntry<'blog'> | null;
+};
 
-const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
+const { title, description, pubDate, updatedDate, heroImage, category, prevPost, nextPost } = Astro.props;
+const cat = CATEGORIES[category as keyof typeof CATEGORIES];
 ---
 
-<html lang="en">
+<html lang="sv">
 	<head>
 		<BaseHead title={title} description={description} />
-		<style>
-			main {
-				width: calc(100% - 2em);
-				max-width: 100%;
-				margin: 0;
-			}
-			.hero-image {
-				width: 100%;
-			}
-			.hero-image img {
-				display: block;
-				margin: 0 auto;
-				border-radius: 12px;
-				box-shadow: var(--box-shadow);
-			}
-			.prose {
-				width: 720px;
-				max-width: calc(100% - 2em);
-				margin: auto;
-				padding: 1em;
-				color: rgb(var(--gray-dark));
-			}
-			.title {
-				margin-bottom: 1em;
-				padding: 1em 0;
-				text-align: center;
-				line-height: 1;
-			}
-			.title h1 {
-				margin: 0 0 0.5em 0;
-			}
-			.date {
-				margin-bottom: 0.5em;
-				color: rgb(var(--gray));
-			}
-			.last-updated-on {
-				font-style: italic;
-			}
-		</style>
 	</head>
 
-	<body>
+	<body class="min-h-screen">
 		<Header />
-		<main>
+		<main class="max-w-4xl mx-auto px-6 py-12">
 			<article>
-				<div class="hero-image">
-					{heroImage && <Image width={1020} height={510} src={heroImage} alt="" />}
-				</div>
-				<div class="prose">
-					<div class="title">
-						<div class="date">
-							<FormattedDate date={pubDate} />
-							{
-								updatedDate && (
-									<div class="last-updated-on">
-										Last updated on <FormattedDate date={updatedDate} />
-									</div>
-								)
-							}
-						</div>
-						<h1>{title}</h1>
-						<hr />
+				{heroImage && (
+					<div class="mb-8 rounded-2xl overflow-hidden shadow-xl">
+						<Image width={1020} height={510} src={heroImage} alt="" class="w-full" />
 					</div>
+				)}
+				<div class="text-center mb-8">
+					<div class="flex items-center justify-center gap-3 mb-4">
+						{cat && (
+							<a
+								href={`/?category=${category}`}
+								class="px-4 py-1 rounded-full text-sm font-bold text-cream"
+								style={`background: ${cat.color}`}
+							>
+								{cat.label}
+							</a>
+						)}
+						<FormattedDate date={pubDate} />
+					</div>
+					<h1 class="text-5xl font-bold text-dark mb-4">{title}</h1>
+					<hr class="border-gray-300 max-w-xs mx-auto" />
+				</div>
+				<div class="prose prose-lg max-w-none text-gray-700">
 					<slot />
 				</div>
 			</article>
+
+			<nav class="mt-16 pt-8 border-t border-gray-300">
+				<div class="flex justify-between gap-4">
+					{prevPost ? (
+						<a
+							href={`/blog/${prevPost.id}/`}
+							class="group flex-1 bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all"
+						>
+							<span class="text-sm text-gray-500 block mb-1">← Föregående</span>
+							<span class="text-lg font-semibold text-dark group-hover:text-accent transition-colors">
+								{prevPost.data.title}
+							</span>
+						</a>
+					) : (
+						<div class="flex-1"></div>
+					)}
+					{nextPost ? (
+						<a
+							href={`/blog/${nextPost.id}/`}
+							class="group flex-1 bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all text-right"
+						>
+							<span class="text-sm text-gray-500 block mb-1">Nästa →</span>
+							<span class="text-lg font-semibold text-dark group-hover:text-accent transition-colors">
+								{nextPost.data.title}
+							</span>
+						</a>
+					) : (
+						<div class="flex-1"></div>
+					)}
+				</div>
+			</nav>
 		</main>
 		<Footer />
 	</body>
