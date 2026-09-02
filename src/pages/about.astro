@@ -2,13 +2,20 @@
 import BaseHead from '../components/BaseHead.astro';
 import Footer from '../components/Footer.astro';
 import Header from '../components/Header.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+import { SITE_TITLE } from '../consts';
 ---
 
 <!doctype html>
 <html lang="sv">
 	<head>
-		<BaseHead title={`Om — ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
+		<BaseHead title={`Om — ${SITE_TITLE}`} description="Om Teklas och vad sidan handlar om" />
+		<script type="application/ld+json" set:html={JSON.stringify({
+			'@context': 'https://schema.org',
+			'@type': 'AboutPage',
+			name: `Om ${SITE_TITLE}`,
+			url: 'https://teklas.se/about/',
+			description: 'Om Teklas och vad sidan handlar om',
+		})} />
 	</head>
 	<body class="min-h-screen">
 		<Header />

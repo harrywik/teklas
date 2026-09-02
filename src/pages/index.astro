@@ -16,6 +16,13 @@ const allPosts = (await getCollection('blog')).sort(
 <html lang="sv">
 	<head>
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+		<script type="application/ld+json" set:html={JSON.stringify({
+			'@context': 'https://schema.org',
+			'@type': 'WebSite',
+			name: SITE_TITLE,
+			url: 'https://teklas.se',
+			description: SITE_DESCRIPTION,
+		})} />
 	</head>
 	<body>
 		<Header />
