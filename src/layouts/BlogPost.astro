@@ -72,21 +72,21 @@ const jsonLd = {
 						)}
 						<FormattedDate date={pubDate} />
 					</div>
-					<h1 class="text-5xl font-bold text-dark mb-4">{title}</h1>
-					<p class="text-xl text-gray-500 mb-6">{description}</p>
+					<h1 class="text-3xl sm:text-5xl font-bold text-dark mb-4">{title}</h1>
+					<p class="text-lg sm:text-xl text-gray-500 mb-6">{description}</p>
 					<hr class="border-gray-300 max-w-xs mx-auto" />
 				</div>
-				<div class="prose prose-lg max-w-none text-gray-700">
+				<div class="prose max-w-none text-gray-700">
 					<slot />
 				</div>
 			</article>
 
 			<nav class="mt-16 pt-8 border-t border-gray-300">
-				<div class="flex justify-between gap-4">
+				<div class="flex flex-col sm:flex-row justify-between gap-4">
 					{prevPost ? (
 						<a
 							href={`/blog/${prevPost.id}/`}
-							class="group flex-1 bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all"
+							class="group bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all"
 						>
 							<span class="text-sm text-gray-500 block mb-1">← Föregående</span>
 							<span class="text-lg font-semibold text-dark group-hover:text-accent transition-colors">
@@ -94,12 +94,12 @@ const jsonLd = {
 							</span>
 						</a>
 					) : (
-						<div class="flex-1"></div>
+						<div></div>
 					)}
 					{nextPost ? (
 						<a
 							href={`/blog/${nextPost.id}/`}
-							class="group flex-1 bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all text-right"
+							class="group bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all sm:text-right"
 						>
 							<span class="text-sm text-gray-500 block mb-1">Nästa →</span>
 							<span class="text-lg font-semibold text-dark group-hover:text-accent transition-colors">
@@ -107,7 +107,7 @@ const jsonLd = {
 							</span>
 						</a>
 					) : (
-						<div class="flex-1"></div>
+						<div></div>
 					)}
 				</div>
 			</nav>
