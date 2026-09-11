@@ -1,0 +1,64 @@
+name: Meta descriptions
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    name: Check meta descriptions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run meta description tests
+        id: test
+        run: node --test tests/meta-descriptions.test.js 2>&1 | tee test-output.txt
+        continue-on-error: true
+
+      - name: Open issues for failing pages
+        if: steps.test.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          grep -oP '^\s+\K\S+\.(astro|md|mdx):\s+\d+\s+chars' test-output.txt | while read -r line; do
+            file=$(echo "$line" | cut -d: -f1)
+            detail=$(echo "$line" | cut -d: -f2-)
+            title="Fix meta description for ${file}"
+            label="meta-description"
+
+            gh label create "$label" --color "d4c5f9" --description "Meta description needs fixing" 2>/dev/null || true
+
+            existing=$(gh issue list --label "$label" --search "$title" --state open --json number --jq 'length')
+            if [ "$existing" -eq 0 ]; then
+              gh issue create \
+                --title "$title" \
+                --body "Meta description for \`${file}\` is outside the 150-160 character range (${detail}). Update the description to meet SEO requirements." \
+                --label "$label"
+              echo "Created issue for ${file}"
+            else
+              echo "Issue already exists for ${file}, skipping"
+            fi
+          done
