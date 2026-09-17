@@ -171,3 +171,22 @@ main {
 	text-decoration: line-through;
 	color: #9ca3af;
 }
+
+.email-copy {
+	background-color: #f3f4f6;
+	color: #6b7280;
+}
+
+.email-copy:hover {
+	background-color: #e5e7eb;
+	color: #374151;
+}
+
+.email-copy[data-copied='true'] {
+	background-color: #dcfce7;
+	color: #15803d;
+}
+
+.email-copy[data-copied='true']:hover {
+	background-color: #bbf7d0;
+}

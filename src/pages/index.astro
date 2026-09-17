@@ -32,24 +32,64 @@ const allPosts = (await getCollection('blog')).sort(
 				<p class="text-lg sm:text-xl text-gray-600">{SITE_DESCRIPTION}</p>
 			</section>
 
-			<div class="flex flex-wrap gap-3 justify-center mb-12" id="filters">
-				<button
-					data-category="all"
-					class="filter-btn px-6 py-2 rounded-full font-semibold text-sm transition-all shadow-sm bg-dark text-cream shadow-md"
-				>
-					Alla
-				</button>
-				{
-					Object.entries(CATEGORIES).map(([key, cat]) => (
-						<button
-							data-category={key}
-							class="filter-btn px-6 py-2 rounded-full font-semibold text-sm transition-all shadow-sm bg-white text-gray-700 hover:shadow-md"
+			<section class="max-w-3xl mx-auto mb-12" aria-label="Sök och filtrera inlägg">
+				<div class="relative">
+					<svg
+						class="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-400 pointer-events-none"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="2"
+						aria-hidden="true"
+					>
+						<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+					</svg>
+					<label for="search-input" class="sr-only">Sök bland inlägg</label>
+					<input
+						id="search-input"
+						type="search"
+						placeholder="Sök bland serier, konst, bokrecensioner och krönikor..."
+						autocomplete="off"
+						class="w-full text-lg sm:text-xl pl-14 pr-6 py-5 rounded-2xl border-2 border-gray-200 bg-white text-dark shadow-md placeholder:text-gray-400 focus:border-accent focus:outline-none transition-colors"
+					/>
+				</div>
+
+				<div class="mt-4 grid sm:grid-cols-2 gap-4">
+					<div>
+						<label for="category-select" class="block text-sm font-semibold text-gray-500 mb-1"
+							>Kategori</label
 						>
-							{cat.label}
-						</button>
-					))
-				}
-			</div>
+						<select
+							id="category-select"
+							class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white font-semibold text-gray-700 focus:border-accent focus:outline-none transition-colors cursor-pointer"
+						>
+							<option value="all">Alla kategorier</option>
+							{
+								Object.entries(CATEGORIES).map(([key, cat]) => (
+									<option value={key}>{cat.label}</option>
+								))
+							}
+						</select>
+					</div>
+					<div>
+						<label for="sort-select" class="block text-sm font-semibold text-gray-500 mb-1"
+							>Sortera efter</label
+						>
+						<select
+							id="sort-select"
+							class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-white font-semibold text-gray-700 focus:border-accent focus:outline-none transition-colors cursor-pointer"
+						>
+							<option value="date-desc">Nyast först</option>
+							<option value="date-asc">Äldst först</option>
+							<option value="title-asc">Titel A till Ö</option>
+							<option value="title-desc">Titel Ö till A</option>
+						</select>
+					</div>
+				</div>
+
+				<p id="results-count" class="mt-3 text-sm text-gray-500" aria-live="polite"></p>
+			</section>
 
 			<div class="grid md:grid-cols-2 gap-8" id="post-grid">
 				{
@@ -57,7 +97,12 @@ const allPosts = (await getCollection('blog')).sort(
 						<a
 							href={`/blog/${post.id}/`}
 							class="post-card group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 block"
+							data-id={post.id}
 							data-category={post.data.category}
+							data-label={CATEGORIES[post.data.category].label}
+							data-title={post.data.title}
+							data-description={post.data.description}
+							data-date={post.data.pubDate.toISOString()}
 						>
 							{post.data.heroImage && (
 								<div class="aspect-[2/1] overflow-hidden">
@@ -93,40 +138,112 @@ const allPosts = (await getCollection('blog')).sort(
 			</div>
 
 			<p id="empty-state" class="text-center py-16 text-gray-500 text-lg hidden">
-				Inga inlägg i denna kategori ännu.
+				Inga inlägg matchar din sökning.
 			</p>
 		</main>
 		<Footer />
 
 		<script>
-			const buttons = document.querySelectorAll('.filter-btn');
-			const cards = document.querySelectorAll('.post-card');
+			const searchInput = document.getElementById('search-input');
+			const categorySelect = document.getElementById('category-select');
+			const sortSelect = document.getElementById('sort-select');
+			const grid = document.getElementById('post-grid');
 			const emptyState = document.getElementById('empty-state');
+			const resultsCount = document.getElementById('results-count');
 
-			buttons.forEach((btn) => {
-				btn.addEventListener('click', () => {
-					const cat = btn.dataset.category;
+			const cards = Array.from(grid.querySelectorAll('.post-card'));
+			const searchIndex = new Map();
 
-					buttons.forEach((b) => {
-						b.className =
-							'filter-btn px-6 py-2 rounded-full font-semibold text-sm transition-all shadow-sm bg-white text-gray-700 hover:shadow-md';
-					});
-					btn.className =
-						'filter-btn px-6 py-2 rounded-full font-semibold text-sm transition-all shadow-sm bg-dark text-cream shadow-md';
+			function normalize(value) {
+				return (value || '').toLowerCase();
+			}
 
-					let visible = 0;
-					cards.forEach((card) => {
-						if (cat === 'all' || card.dataset.category === cat) {
-							card.style.display = '';
-							visible++;
-						} else {
-							card.style.display = 'none';
-						}
-					});
+			function cardText(card) {
+				return normalize(
+					[
+						card.dataset.title,
+						card.dataset.description,
+						card.dataset.label,
+						searchIndex.get(card.dataset.id),
+					].join(' '),
+				);
+			}
 
-					emptyState.classList.toggle('hidden', visible > 0);
+			function sortCards(list) {
+				const mode = sortSelect.value;
+				return [...list].sort((a, b) => {
+					if (mode === 'title-asc' || mode === 'title-desc') {
+						const cmp = a.dataset.title.localeCompare(b.dataset.title, 'sv');
+						return mode === 'title-asc' ? cmp : -cmp;
+					}
+					const aTime = new Date(a.dataset.date).valueOf();
+					const bTime = new Date(b.dataset.date).valueOf();
+					return mode === 'date-asc' ? aTime - bTime : bTime - aTime;
 				});
-			});
+			}
+
+			function hasOption(select, value) {
+				return Array.from(select.options).some((option) => option.value === value);
+			}
+
+			function updateUrl() {
+				const params = new URLSearchParams();
+				const query = searchInput.value.trim();
+				if (query) params.set('q', query);
+				if (categorySelect.value !== 'all') params.set('category', categorySelect.value);
+				if (sortSelect.value !== 'date-desc') params.set('sort', sortSelect.value);
+
+				const search = params.toString();
+				history.replaceState(null, '', search ? `?${search}` : window.location.pathname);
+			}
+
+			function applyFilters() {
+				const terms = normalize(searchInput.value.trim()).split(/\s+/).filter(Boolean);
+				const category = categorySelect.value;
+
+				const matching = cards.filter((card) => {
+					if (category !== 'all' && card.dataset.category !== category) return false;
+					if (terms.length === 0) return true;
+					const text = cardText(card);
+					return terms.every((term) => text.includes(term));
+				});
+
+				sortCards(matching).forEach((card) => grid.appendChild(card));
+				cards.forEach((card) => {
+					card.style.display = matching.includes(card) ? '' : 'none';
+				});
+
+				emptyState.classList.toggle('hidden', matching.length > 0);
+				resultsCount.textContent = `${matching.length} av ${cards.length} inlägg`;
+				updateUrl();
+			}
+
+			const params = new URLSearchParams(window.location.search);
+			const requestedQuery = params.get('q');
+			const requestedCategory = params.get('category');
+			const requestedSort = params.get('sort');
+
+			if (requestedQuery) searchInput.value = requestedQuery;
+			if (requestedCategory && hasOption(categorySelect, requestedCategory)) {
+				categorySelect.value = requestedCategory;
+			}
+			if (requestedSort && hasOption(sortSelect, requestedSort)) {
+				sortSelect.value = requestedSort;
+			}
+
+			searchInput.addEventListener('input', applyFilters);
+			categorySelect.addEventListener('change', applyFilters);
+			sortSelect.addEventListener('change', applyFilters);
+
+			fetch('/search-index.json')
+				.then((response) => (response.ok ? response.json() : []))
+				.then((index) => {
+					index.forEach((item) => searchIndex.set(item.id, item.body));
+					applyFilters();
+				})
+				.catch(() => applyFilters());
+
+			applyFilters();
 		</script>
 	</body>
 </html>
