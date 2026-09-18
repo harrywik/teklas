@@ -153,20 +153,28 @@ const allPosts = (await getCollection('blog')).sort(
 		<Footer />
 
 		<script>
-			const searchInput = document.getElementById('search-input');
-			const categorySelect = document.getElementById('category-select');
-			const sortSelect = document.getElementById('sort-select');
-			const grid = document.getElementById('post-grid');
-			const emptyState = document.getElementById('empty-state');
-			const resultsCount = document.getElementById('results-count');
+			type SearchIndexItem = { id: string; body?: string; tags?: string[] };
+			type CardContent = {
+				title: string;
+				description: string;
+				titleEl: Element | null;
+				descEl: Element | null;
+			};
+
+			const searchInput = document.getElementById('search-input') as HTMLInputElement;
+			const categorySelect = document.getElementById('category-select') as HTMLSelectElement;
+			const sortSelect = document.getElementById('sort-select') as HTMLSelectElement;
+			const grid = document.getElementById('post-grid') as HTMLElement;
+			const emptyState = document.getElementById('empty-state') as HTMLElement;
+			const resultsCount = document.getElementById('results-count') as HTMLElement;
 			const shortcutHint = document.getElementById('search-shortcut');
 
-			const cards = Array.from(grid.querySelectorAll('.post-card'));
-			const searchIndex = new Map();
-			const cardContent = new Map();
+			const cards = Array.from(grid.querySelectorAll<HTMLElement>('.post-card'));
+			const searchIndex = new Map<string, string>();
+			const cardContent = new Map<HTMLElement, CardContent>();
 
 			let fullIndexRequested = false;
-			let debounceTimer;
+			let debounceTimer: number | undefined;
 
 			cards.forEach((card) => {
 				const titleEl = card.querySelector('.post-card-title');
@@ -184,12 +192,12 @@ const allPosts = (await getCollection('blog')).sort(
 				shortcutHint.textContent = isMac ? '⌘ K' : 'Ctrl K';
 			}
 
-			function normalize(value) {
+			function normalize(value: string | undefined): string {
 				return (value || '').toLowerCase();
 			}
 
-			function escapeHtml(value) {
-				return value.replace(/[&<>"']/g, (char) => {
+			function escapeHtml(value: string): string {
+				return value.replace(/[&<>"']/g, (char: string) => {
 					switch (char) {
 						case '&':
 							return '&amp;';
@@ -205,33 +213,36 @@ const allPosts = (await getCollection('blog')).sort(
 				});
 			}
 
-			function escapeRegExp(value) {
+			function escapeRegExp(value: string): string {
 				return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 			}
 
-			function highlight(value, terms) {
+			function highlight(value: string, terms: string[]): string {
 				const safe = escapeHtml(value);
 				if (terms.length === 0) return safe;
 				const pattern = new RegExp(`(${terms.map(escapeRegExp).join('|')})`, 'gi');
 				return safe.replace(pattern, '<mark class="rounded-sm bg-warm/70 px-0.5 text-dark">$1</mark>');
 			}
 
-			function cardText(card) {
+			function cardText(card: HTMLElement): string {
 				return normalize(
-					[card.dataset.title, card.dataset.description, card.dataset.label, searchIndex.get(card.dataset.id)].join(
-						' ',
-					),
+					[
+						card.dataset.title,
+						card.dataset.description,
+						card.dataset.label,
+						searchIndex.get(card.dataset.id ?? ''),
+					].join(' '),
 				);
 			}
 
 			// The full-text index is only fetched when someone actually searches,
 			// so visitors never download post bodies just to browse the homepage.
-			function loadFullIndex() {
+			function loadFullIndex(): Promise<void> {
 				if (fullIndexRequested) return Promise.resolve();
 				fullIndexRequested = true;
 				return fetch('/search-index.json')
 					.then((response) => (response.ok ? response.json() : []))
-					.then((index) => {
+					.then((index: SearchIndexItem[]) => {
 						index.forEach((item) => {
 							const tags = Array.isArray(item.tags) ? item.tags.join(' ') : '';
 							searchIndex.set(item.id, [item.body, tags].filter(Boolean).join(' '));
@@ -240,24 +251,24 @@ const allPosts = (await getCollection('blog')).sort(
 					.catch(() => {});
 			}
 
-			function sortCards(list) {
+			function sortCards(list: HTMLElement[]): HTMLElement[] {
 				const mode = sortSelect.value;
 				return [...list].sort((a, b) => {
 					if (mode === 'title-asc' || mode === 'title-desc') {
-						const cmp = a.dataset.title.localeCompare(b.dataset.title, 'sv');
+						const cmp = (a.dataset.title ?? '').localeCompare(b.dataset.title ?? '', 'sv');
 						return mode === 'title-asc' ? cmp : -cmp;
 					}
-					const aTime = new Date(a.dataset.date).valueOf();
-					const bTime = new Date(b.dataset.date).valueOf();
+					const aTime = new Date(a.dataset.date ?? '').valueOf();
+					const bTime = new Date(b.dataset.date ?? '').valueOf();
 					return mode === 'date-asc' ? aTime - bTime : bTime - aTime;
 				});
 			}
 
-			function hasOption(select, value) {
+			function hasOption(select: HTMLSelectElement, value: string): boolean {
 				return Array.from(select.options).some((option) => option.value === value);
 			}
 
-			function updateUrl(push) {
+			function updateUrl(push: boolean): void {
 				const params = new URLSearchParams();
 				const query = searchInput.value.trim();
 				if (query) params.set('q', query);
@@ -270,8 +281,8 @@ const allPosts = (await getCollection('blog')).sort(
 				else history.replaceState(null, '', url);
 			}
 
-			function applyFilters(options) {
-				const settings = options || {};
+			function applyFilters(options: { push?: boolean } = {}): void {
+				const settings = options;
 				const rawQuery = searchInput.value.trim();
 				const terms = normalize(rawQuery).split(/\s+/).filter(Boolean);
 				const category = categorySelect.value;
@@ -308,7 +319,7 @@ const allPosts = (await getCollection('blog')).sort(
 				}
 			}
 
-			function readStateFromUrl() {
+			function readStateFromUrl(): void {
 				const params = new URLSearchParams(window.location.search);
 				const query = params.get('q');
 				const category = params.get('category');
