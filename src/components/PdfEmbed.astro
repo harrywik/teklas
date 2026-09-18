@@ -47,7 +47,7 @@ const { src, title, description, cover, coverAlt = '' } = Astro.props;
 						class="pdf-load group relative block w-full cursor-pointer"
 						aria-label={`Visa ${title}`}
 					>
-						<Image src={cover} alt={coverAlt} class="mx-auto h-auto w-full max-w-xl" />
+						<Image src={cover} alt={coverAlt} loading="lazy" decoding="async" class="mx-auto h-auto w-full max-w-xl" />
 						<span class="absolute inset-0 flex items-center justify-center bg-dark/5 transition-colors group-hover:bg-dark/25">
 							<span class="flex items-center gap-2 rounded-full bg-white/95 px-5 py-2.5 text-sm font-semibold text-dark shadow-lg transition-transform group-hover:scale-105">
 								<svg

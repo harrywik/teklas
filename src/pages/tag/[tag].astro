@@ -1,0 +1,125 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import { getCollection } from 'astro:content';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import FormattedDate from '../../components/FormattedDate.astro';
+import Header from '../../components/Header.astro';
+import { CATEGORIES, SITE_TITLE } from '../../consts';
+import { tagToSlug } from '../../lib/tags';
+
+type TagGroup = { label: string; posts: CollectionEntry<'blog'>[] };
+
+export async function getStaticPaths() {
+	const posts = await getCollection('blog');
+	const groups = new Map<string, TagGroup>();
+
+	for (const post of posts) {
+		for (const tag of post.data.tags) {
+			const slug = tagToSlug(tag);
+			if (!slug) continue;
+			if (!groups.has(slug)) groups.set(slug, { label: tag, posts: [] });
+			groups.get(slug)!.posts.push(post);
+		}
+	}
+
+	return Array.from(groups.entries()).map(([tag, group]) => ({
+		params: { tag },
+		props: {
+			label: group.label,
+			posts: group.posts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()),
+		},
+	}));
+}
+
+interface Props {
+	label: string;
+	posts: CollectionEntry<'blog'>[];
+}
+
+const { label, posts } = Astro.props;
+const description = `Alla inlägg på ${SITE_TITLE} märkta med ${label}. Serier, konst, bokrecensioner och krönikor - utan flöden eller algoritmer, bara innehåll som är värt din tid.`;
+
+const jsonLd = {
+	'@context': 'https://schema.org',
+	'@type': 'CollectionPage',
+	name: `#${label} | ${SITE_TITLE}`,
+	url: new URL(Astro.url.pathname, Astro.site).href,
+	description,
+	hasPart: posts.map((post) => ({
+		'@type': 'BlogPosting',
+		headline: post.data.title,
+		url: new URL(`/blog/${post.id}/`, Astro.site).href,
+		datePublished: post.data.pubDate.toISOString(),
+	})),
+};
+---
+
+<!doctype html>
+<html lang="sv">
+	<head>
+		<BaseHead title={`#${label} | ${SITE_TITLE}`} description={description} />
+		<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+	</head>
+	<body class="min-h-screen">
+		<Header />
+		<main class="w-full max-w-6xl mx-auto px-6 py-12">
+			<header class="mb-10 text-center">
+				<p class="text-sm font-semibold uppercase tracking-wide text-gray-500">Etikett</p>
+				<h1 class="text-4xl sm:text-5xl font-bold text-dark mb-3">#{label}</h1>
+				<p class="text-lg text-gray-600">{posts.length} inlägg märkta med {label}</p>
+			</header>
+
+			<div class="grid md:grid-cols-2 gap-8 items-start">
+				{
+					posts.map((post) => (
+						<a
+							href={`/blog/${post.id}/`}
+							class="post-card group bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 block"
+						>
+							{post.data.heroImage && (
+								<div class="aspect-[2/1] overflow-hidden">
+									<Image
+										width={720}
+										height={360}
+										src={post.data.heroImage}
+										alt={`Omslagsbild till ${post.data.title}`}
+										loading="lazy"
+										decoding="async"
+										class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+									/>
+								</div>
+							)}
+							<div class="p-6">
+								<div class="flex items-center gap-3 mb-3">
+									<span
+										class="px-3 py-1 rounded-full text-xs font-bold text-cream"
+										style={`background-color: ${CATEGORIES[post.data.category].color}`}
+									>
+										{CATEGORIES[post.data.category].label}
+									</span>
+									<FormattedDate date={post.data.pubDate} />
+								</div>
+								<h2 class="text-xl font-bold text-dark group-hover:text-accent transition-colors">
+									{post.data.title}
+								</h2>
+								<p class="mt-2 text-gray-600 text-sm line-clamp-2">{post.data.description}</p>
+							</div>
+						</a>
+					))
+				}
+			</div>
+
+			<div class="mt-12 text-center">
+				<a
+					href="/"
+					class="inline-block rounded-full bg-dark px-6 py-3 text-sm font-semibold text-cream transition-colors hover:bg-accent"
+				>
+					Till alla inlägg
+				</a>
+			</div>
+		</main>
+		<Footer />
+	</body>
+</html>

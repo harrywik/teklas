@@ -51,8 +51,15 @@ const allPosts = (await getCollection('blog')).sort(
 						type="search"
 						placeholder="Sök bland serier, konst, bokrecensioner och krönikor..."
 						autocomplete="off"
-						class="w-full text-lg sm:text-xl pl-14 pr-6 py-5 rounded-2xl border-2 border-gray-200 bg-white text-dark shadow-md placeholder:text-gray-400 focus:border-accent focus:outline-none transition-colors"
+						class="w-full text-lg sm:text-xl pl-14 pr-24 py-5 rounded-2xl border-2 border-gray-200 bg-white text-dark shadow-md placeholder:text-gray-400 focus:border-accent focus:outline-none transition-colors"
 					/>
+					<kbd
+						id="search-shortcut"
+						class="pointer-events-none absolute right-5 top-1/2 hidden -translate-y-1/2 select-none items-center rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-semibold text-gray-400 sm:flex"
+						aria-hidden="true"
+					>
+						Ctrl K
+					</kbd>
 				</div>
 
 				<div class="mt-4 grid sm:grid-cols-2 gap-4">
@@ -110,7 +117,9 @@ const allPosts = (await getCollection('blog')).sort(
 										width={720}
 										height={360}
 										src={post.data.heroImage}
-										alt=""
+										alt={`Omslagsbild till ${post.data.title}`}
+										loading="lazy"
+										decoding="async"
 										class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
 									/>
 								</div>
@@ -125,10 +134,10 @@ const allPosts = (await getCollection('blog')).sort(
 									</span>
 									<FormattedDate date={post.data.pubDate} />
 								</div>
-								<h3 class="text-xl font-bold text-dark group-hover:text-accent transition-colors">
+								<h3 class="post-card-title text-xl font-bold text-dark group-hover:text-accent transition-colors">
 									{post.data.title}
 								</h3>
-								<p class="mt-2 text-gray-600 text-sm line-clamp-2">
+								<p class="post-card-description mt-2 text-gray-600 text-sm line-clamp-2">
 									{post.data.description}
 								</p>
 							</div>
@@ -150,23 +159,85 @@ const allPosts = (await getCollection('blog')).sort(
 			const grid = document.getElementById('post-grid');
 			const emptyState = document.getElementById('empty-state');
 			const resultsCount = document.getElementById('results-count');
+			const shortcutHint = document.getElementById('search-shortcut');
 
 			const cards = Array.from(grid.querySelectorAll('.post-card'));
 			const searchIndex = new Map();
+			const cardContent = new Map();
+
+			let fullIndexRequested = false;
+			let debounceTimer;
+
+			cards.forEach((card) => {
+				const titleEl = card.querySelector('.post-card-title');
+				const descEl = card.querySelector('.post-card-description');
+				cardContent.set(card, {
+					title: titleEl ? titleEl.textContent || '' : '',
+					description: descEl ? descEl.textContent || '' : '',
+					titleEl,
+					descEl,
+				});
+			});
+
+			if (shortcutHint) {
+				const isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
+				shortcutHint.textContent = isMac ? '⌘ K' : 'Ctrl K';
+			}
 
 			function normalize(value) {
 				return (value || '').toLowerCase();
 			}
 
+			function escapeHtml(value) {
+				return value.replace(/[&<>"']/g, (char) => {
+					switch (char) {
+						case '&':
+							return '&amp;';
+						case '<':
+							return '&lt;';
+						case '>':
+							return '&gt;';
+						case '"':
+							return '&quot;';
+						default:
+							return '&#39;';
+					}
+				});
+			}
+
+			function escapeRegExp(value) {
+				return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			}
+
+			function highlight(value, terms) {
+				const safe = escapeHtml(value);
+				if (terms.length === 0) return safe;
+				const pattern = new RegExp(`(${terms.map(escapeRegExp).join('|')})`, 'gi');
+				return safe.replace(pattern, '<mark class="rounded-sm bg-warm/70 px-0.5 text-dark">$1</mark>');
+			}
+
 			function cardText(card) {
 				return normalize(
-					[
-						card.dataset.title,
-						card.dataset.description,
-						card.dataset.label,
-						searchIndex.get(card.dataset.id),
-					].join(' '),
+					[card.dataset.title, card.dataset.description, card.dataset.label, searchIndex.get(card.dataset.id)].join(
+						' ',
+					),
 				);
+			}
+
+			// The full-text index is only fetched when someone actually searches,
+			// so visitors never download post bodies just to browse the homepage.
+			function loadFullIndex() {
+				if (fullIndexRequested) return Promise.resolve();
+				fullIndexRequested = true;
+				return fetch('/search-index.json')
+					.then((response) => (response.ok ? response.json() : []))
+					.then((index) => {
+						index.forEach((item) => {
+							const tags = Array.isArray(item.tags) ? item.tags.join(' ') : '';
+							searchIndex.set(item.id, [item.body, tags].filter(Boolean).join(' '));
+						});
+					})
+					.catch(() => {});
 			}
 
 			function sortCards(list) {
@@ -186,7 +257,7 @@ const allPosts = (await getCollection('blog')).sort(
 				return Array.from(select.options).some((option) => option.value === value);
 			}
 
-			function updateUrl() {
+			function updateUrl(push) {
 				const params = new URLSearchParams();
 				const query = searchInput.value.trim();
 				if (query) params.set('q', query);
@@ -194,11 +265,15 @@ const allPosts = (await getCollection('blog')).sort(
 				if (sortSelect.value !== 'date-desc') params.set('sort', sortSelect.value);
 
 				const search = params.toString();
-				history.replaceState(null, '', search ? `?${search}` : window.location.pathname);
+				const url = search ? `?${search}` : window.location.pathname;
+				if (push) history.pushState(null, '', url);
+				else history.replaceState(null, '', url);
 			}
 
-			function applyFilters() {
-				const terms = normalize(searchInput.value.trim()).split(/\s+/).filter(Boolean);
+			function applyFilters(options) {
+				const settings = options || {};
+				const rawQuery = searchInput.value.trim();
+				const terms = normalize(rawQuery).split(/\s+/).filter(Boolean);
 				const category = categorySelect.value;
 
 				const matching = cards.filter((card) => {
@@ -209,40 +284,63 @@ const allPosts = (await getCollection('blog')).sort(
 				});
 
 				sortCards(matching).forEach((card) => grid.appendChild(card));
+				const matchingSet = new Set(matching);
 				cards.forEach((card) => {
-					card.style.display = matching.includes(card) ? '' : 'none';
+					card.style.display = matchingSet.has(card) ? '' : 'none';
+				});
+
+				cards.forEach((card) => {
+					const content = cardContent.get(card);
+					if (!content) return;
+					const activeTerms = matchingSet.has(card) ? terms : [];
+					if (content.titleEl) content.titleEl.innerHTML = highlight(content.title, activeTerms);
+					if (content.descEl) content.descEl.innerHTML = highlight(content.description, activeTerms);
 				});
 
 				emptyState.classList.toggle('hidden', matching.length > 0);
 				resultsCount.textContent = `${matching.length} av ${cards.length} inlägg`;
-				updateUrl();
+
+				updateUrl(settings.push === true);
+
+				if (terms.length > 0 && !fullIndexRequested) {
+					resultsCount.textContent += ' · söker i fulltext…';
+					loadFullIndex().then(() => applyFilters());
+				}
 			}
 
-			const params = new URLSearchParams(window.location.search);
-			const requestedQuery = params.get('q');
-			const requestedCategory = params.get('category');
-			const requestedSort = params.get('sort');
+			function readStateFromUrl() {
+				const params = new URLSearchParams(window.location.search);
+				const query = params.get('q');
+				const category = params.get('category');
+				const sort = params.get('sort');
 
-			if (requestedQuery) searchInput.value = requestedQuery;
-			if (requestedCategory && hasOption(categorySelect, requestedCategory)) {
-				categorySelect.value = requestedCategory;
-			}
-			if (requestedSort && hasOption(sortSelect, requestedSort)) {
-				sortSelect.value = requestedSort;
+				searchInput.value = query ?? '';
+				categorySelect.value = category && hasOption(categorySelect, category) ? category : 'all';
+				sortSelect.value = sort && hasOption(sortSelect, sort) ? sort : 'date-desc';
 			}
 
-			searchInput.addEventListener('input', applyFilters);
-			categorySelect.addEventListener('change', applyFilters);
-			sortSelect.addEventListener('change', applyFilters);
+			searchInput.addEventListener('input', () => {
+				window.clearTimeout(debounceTimer);
+				debounceTimer = window.setTimeout(() => applyFilters(), 150);
+			});
 
-			fetch('/search-index.json')
-				.then((response) => (response.ok ? response.json() : []))
-				.then((index) => {
-					index.forEach((item) => searchIndex.set(item.id, item.body));
-					applyFilters();
-				})
-				.catch(() => applyFilters());
+			categorySelect.addEventListener('change', () => applyFilters({ push: true }));
+			sortSelect.addEventListener('change', () => applyFilters({ push: true }));
 
+			window.addEventListener('popstate', () => {
+				readStateFromUrl();
+				applyFilters();
+			});
+
+			document.addEventListener('keydown', (event) => {
+				if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+					event.preventDefault();
+					searchInput.focus();
+					searchInput.select();
+				}
+			});
+
+			readStateFromUrl();
 			applyFilters();
 		</script>
 	</body>

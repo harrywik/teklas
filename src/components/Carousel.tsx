@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 interface ImageData {
 	src: string;
 	alt: string;
+	width?: number;
+	height?: number;
 }
 
 interface CarouselProps {
@@ -70,6 +72,10 @@ export default function Carousel({ images }: CarouselProps) {
 						<img
 							src={image.src}
 							alt={image.alt}
+							width={image.width}
+							height={image.height}
+							loading="lazy"
+							decoding="async"
 							className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
 						/>
 					</div>
@@ -171,6 +177,10 @@ export default function Carousel({ images }: CarouselProps) {
 								<img
 									src={image.src}
 									alt={image.alt}
+									width={image.width}
+									height={image.height}
+									loading="lazy"
+									decoding="async"
 									className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
 								/>
 							</div>

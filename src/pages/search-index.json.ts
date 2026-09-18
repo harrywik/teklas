@@ -25,6 +25,7 @@ export const GET: APIRoute = async () => {
 		category: post.data.category,
 		categoryLabel: CATEGORIES[post.data.category].label,
 		pubDate: post.data.pubDate.toISOString(),
+		tags: post.data.tags,
 		body: stripMarkdown(post.body ?? ''),
 	}));
 
