@@ -12,6 +12,7 @@ title: 'Markdown-demonstration'
 description: 'En komplett guide till alla Markdown-funktioner som stöds på Teklas.'
 pubDate: 'Aug 20 2026'
 category: 'opinion-piece' <-- kan också vara 'book-review' | 'cartoon' | 'art'
+tags: ['Bildberättelse', 'Rymden', 'Konst'] <-- vad som helst som du vill kunna gruppera efter
 heroImage: '../../assets/images/<bildnamn>.<bildtyp>' <-- blir som en thumbnail för inlägget
 ---
 ```
